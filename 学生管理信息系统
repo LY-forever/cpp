@@ -1,0 +1,584 @@
+#include<iostream>
+#include<string>
+#include<fstream>						//文件的输出输出流操作
+#include<iomanip>						//对齐输出
+#include<cstdlib>						//清屏
+#pragma warning(disable:4996)
+using namespace std;
+const int M = 16;
+const int N = 14;
+const int K = 3;
+class Student							//类的定义，包括学生信息
+{
+public:
+	char num[N];
+	char name[M];
+	int  score[K];
+	double gpa[K];						//数组存放学生对应课程的绩点
+	double agpa;						//存放平均绩点
+public:
+	Student(){};
+	char *getnum();						//获取学号
+	char *getname();					//获取姓名
+	void setnum(char nu[]);				//设置学号
+	void setname(char na[]);			//设置姓名
+	void setscore(int sc[]);			//设置学生成绩
+	void setgpa(double g[]);			//设置学生成绩相应绩点
+	void setagpa(double ag);			//设置学生的平均绩点
+	void computegpa();					//求学生的绩点
+	void computeagpa();					//求学生的平均绩点
+	void getscore(int sc[]);			//获得成绩
+	void getgpa(double g[]);			//获得绩点
+	void getagpa(double &ag);			//获得平均绩点
+	void disp();						//输出学生信息
+};
+class UserDatabase
+{
+public:
+	int nElem;							//学生信息表中元素个数
+	int Maxu;							//最多的学生
+	Student *user;						//指向学生信息的指针
+public:
+	UserDatabase(int n = 30);			//构造函数，初始化学生信息表，将user.txt读到User[]中
+	~UserDatabase();					//析构函数，将user[]写入user.txt文件中
+	void clear();						//删除所有学生信息
+	void add_record(char *nu,char *na,int sc[]);
+										//添加学生信息，插入后学生仍按照升序排列
+	void delete_record(Student *p,int *k);//删除学生信息
+	void modify_record(Student *p,int sc[]);//修改学生信息
+	//Student *query(char *nu);			//按学号查找
+	void sorta_num();					//按学号升序
+	void sorta_name();					//按姓名升序
+	void sorta_agpa();					//按平均绩点升序
+	void sort_num(); 
+	void sort_name();					//按姓名降序排序
+	void sort_agpa();					//按平均绩点降序
+	void disp();						//输出所有学生信息
+};
+void meau();							//界面菜单
+void choose();							//界面选择
+void add();								//增加记录
+void change();							//修改记录
+void deletes();							//删除记录
+void search();							//查找
+void sorts();							//排序
+void show();							//显示信息
+void clean();							//全删
+int mycmp(char s1[],int l1,char s2[],int l2);//字符数组比较
+void meau_sort();						//排序子菜单
+void choose_sort();						//排序switch选择
+int main()
+{
+	while(1)
+	{
+		meau();
+		choose();
+		system("cls");
+	}
+	return 0;
+}
+//Student类函数定义
+char *Student::getnum()
+{
+	return num;
+}
+char *Student::getname()
+{
+	return name;
+}
+void Student::setnum(char nu[])
+{
+	strncpy(num,nu,N);
+}
+void Student::setname(char na[])
+{
+	strcpy(name,na);
+}
+void Student::setscore(int sc[])
+{
+	for(int i = 0;i<K;i++)
+		score[i] = sc[i];
+}
+void Student::setgpa(double g[])
+{
+	for(int i = 0;i<K;i++)
+		gpa[i] = g[i];
+}
+
+void Student::setagpa(double ag)
+{
+	agpa = ag;
+}
+void Student::computeagpa()
+{
+	double sum=0;
+	for(int i = 0;i<K;i++)
+		sum+=gpa[i];
+	agpa = sum/K;
+}
+
+void Student::computegpa()
+{
+	for(int i = 0;i<K;i++)
+		gpa[i] = double((score[i] - 50))/10;
+}
+void Student::getscore(int sc[])
+{}
+void Student::getgpa(double g[])
+{}
+void Student::getagpa(double &ag)
+{}
+void Student::disp()
+{
+	cout<<num<<"\t"<<name<<"\t";
+}
+
+//UserDatabase类中的函数的实现
+UserDatabase::UserDatabase(int n)
+{
+	/*ifstream inFile("user.txt");
+	int i=0;
+	char nu1[N];
+	char na1[M];
+	int sc1[K];
+	double g1[K];
+	double ag1;
+	UserDatabase U;
+	U.user = new Student[4];
+	for(i = 0;i<4;i++)
+	{	
+		inFile>>nu1;
+		user[i].setnum(nu1);
+		inFile>>na1;
+		user[i].setname(na1);
+		for(int j = 0;j<K;j++)
+			inFile>>sc1[j];
+		user[i].setscore(sc1);
+		for(int k = 0;k<K;k++)
+			inFile>>g1[k];
+		user[i].setgpa(g1);
+		inFile>>ag1;
+		user[i].setagpa(ag1);
+	}
+	*/
+	int i,sc[K];
+	double g[K],ag;
+	char num[N],na[M];
+	ifstream infile;
+	infile.open("user.txt",ios::in);
+	if(!infile)						//打开文件发生错误
+	{
+		cout<<"打开文件错误."<<endl;
+		exit(0);
+	}
+	nElem = 0;
+	Maxu  = n;
+	if(n)
+		user = new Student[n];
+	else 
+		user = 0;
+	while(infile>>num)
+	{
+		infile>>na;
+		for(i = 0;i<K;i++)
+			infile>>sc[i];
+		for(i = 0;i<K;i++)
+			infile>>g[i];
+		infile>>ag;
+		if(nElem ==Maxu)
+		{
+			Student *newptr;
+			newptr = new Student[Maxu+10];
+			for(i=0;i<nElem;i++)
+				newptr[i] = user[i];
+			delete [Maxu] user;
+			Maxu +=10;
+			user = newptr;
+		}
+		user[nElem].setnum(num);
+		user[nElem].setname(na);
+		user[nElem].setscore(sc);
+		user[nElem].setgpa(g);
+		user[nElem].setagpa(ag);
+		nElem++;
+	}
+	infile.close();
+}
+
+UserDatabase::~UserDatabase()
+{
+	ofstream outfile;
+	outfile.open("user.txt");
+	for(int i=0;i<nElem;i++)
+	{
+		outfile<<user[i].num<<"\t"<<user[i].name<<"\t";
+		for(int j =0;j<K;j++)
+			outfile<<user[i].score[j]<<"\t";
+		for(int k=0;k<K;k++)
+			outfile<<user[i].gpa[k]<<"\t";
+		outfile<<user[i].agpa<<endl;
+	}
+}
+void UserDatabase::clear()
+{}
+void UserDatabase::add_record(char *nu,char *na,int sc[])
+{
+	nElem++;
+	strcpy(user[nElem-1].num,nu);
+	strcpy(user[nElem-1].name,na);
+	for(int i = 0;i<K;i++)
+		user[nElem-1].score[i] = sc[i];
+	user[nElem-1].computegpa();
+	user[nElem-1].computeagpa();
+}
+void UserDatabase::delete_record(Student *p,int *k)
+{}
+void UserDatabase::modify_record(Student *p,int sc[])
+{}
+//Student* UserDatabase::query(char *nu)
+//{}
+void UserDatabase::sorta_num()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(mycmp(user[i].num,10,user[j].num,10)==1)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::sorta_name()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(mycmp(user[i].name,M,user[j].name,M)==1)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::sorta_agpa()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(user[i].agpa<user[j].agpa)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::sort_num()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(mycmp(user[i].num,10,user[j].num,10)==-1)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::sort_name()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(mycmp(user[i].name,M,user[j].name,M)==-1)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::sort_agpa()
+{
+	for(int i = 0;i<nElem;i++)
+	{
+		for(int j = 0;j<nElem;j++)
+		{
+			if(user[i].agpa>user[j].agpa)
+			{
+				Student s;
+				s = user[i];
+				user[i] = user[j];
+				user[j] = s;
+			}
+		}
+	}
+}
+void UserDatabase::disp()
+{
+	for(int i =0;i<nElem;i++)
+	{
+		cout<<user[i].num<<"\t"<<user[i].name<<"\t";
+		for(int j = 0;j<K;j++)
+			cout<<user[i].score[j]<<"\t";
+		for(int j = 0;j<K;j++)
+			cout<<user[i].gpa[j]<<"\t";
+		cout<<user[i].agpa<<endl;
+	}
+}
+
+void meau()
+{
+	cout<<"请选择以下功能"<<endl;
+	cout<<"1 -增加记录"<<endl;
+	cout<<"2 -修改记录"<<endl;
+	cout<<"3 -删除记录"<<endl;
+	cout<<"4 -查找"<<endl;
+	cout<<"5 -排序"<<endl;
+	cout<<"6 -显示记录"<<endl;
+	cout<<"7 -全删"<<endl;
+	cout<<"0 -退出"<<endl;
+	cout<<"输入选择："<<endl;
+}
+void choose()
+{
+	int i;
+	cin>>i;
+	system("cls");
+	switch(i)
+	{
+	case 1:add();
+		break;
+	case 2:change();
+		break;
+	case 3:deletes();
+		break;
+	case 4:search();
+		break;
+	case 5:sorts();
+		break;
+	case 6:show();
+		break;
+	case 7:clean();
+		break;
+	case 0:cout<<"你选择了退出程序."<<endl;
+		break;
+	default:break;
+	}
+}
+//choose函数中函数的实现
+void add()
+{
+	UserDatabase U;
+	char nu2[N];
+	char na2[M];
+	int  sc2[K];
+	cout<<"请输入学号:";
+	cin>>nu2;
+	cout<<"请输入姓名:";
+	cin>>na2;
+	cout<<"请依次输入高数、物理、程序设计成绩:";
+	for(int i = 0;i<K;i++)
+		cin>>sc2[i];
+	U.add_record(nu2,na2,sc2);
+	U.sorta_num();
+}
+
+void change()
+{
+	UserDatabase U;
+	int sc[K];
+	char s[N],s1[N];
+	cout<<"请输入要修改的学生的学号:";
+	cin>>s;
+	strcpy(s1,s);
+	cout<<"请依次输入学生的高数、物理、程序设计成绩:";
+	cin>>sc[0]>>sc[1]>>sc[2];
+	for(int i=0;i<U.nElem;i++)
+	{
+		if(mycmp(U.user[i].num,10,s1,10)==0)
+		{
+			for(int j = 0;j<K;j++)
+			{
+				cout<<"here";
+				U.user[i].score[j] = sc[j];
+			}
+			U.user[i].computegpa();
+			U.user[i].computeagpa();
+		
+			return ;
+		}
+		cout<<U.nElem<<endl;
+		if(i ==U.nElem-1)
+		{
+			cout<<"该学生不存在"<<endl;
+		}
+	}
+}
+int mycmp(char s1[],int l1,char s2[],int l2)
+{
+	int lmin = l1>l2?l2:l1;
+	int i;
+	for(i = 0;i<lmin;i++)
+	{
+		if(s1[i]<s2[i]) return 1;
+		else if(s1[i]>s2[i]) return -1;
+	}
+	if(l1==l2) 
+		return 0;
+	if(l1>l2)  
+		return 1;
+	 
+	return -1;
+}
+
+
+void clean()
+{
+	cout<<"你确定清空所有信息？Are U sure?"<<endl;
+	cout<<"如果你sure的话，请输入Y,\n"
+		<<"如果你不sure的话，输入N.\n";
+	char ch;
+	cin>>ch;
+	if(ch == 'Y')
+	{
+		UserDatabase U;
+		U.nElem = 0;
+	}
+	else if(ch == 'N')
+	{
+		cout<<"没有清空."<<endl;
+	}
+	else
+	{
+		cout<<"你输错了，要注意大小写."<<endl;
+		clean();
+	}
+
+}
+
+void search()
+{
+	UserDatabase U;
+	int i,sc[K];
+	char s[N];
+	cout<<"请输入要查找的学生的学号:";
+	cin>>s;
+	for(i=0;i<U.nElem;i++)
+	{
+		if(!mycmp(U.user[i].num,10,s,10))
+		{
+			cout<<U.user[i].num<<"\t"<<U.user[i].name<<"\t";
+			for(int j = 0;j<K;j++)
+				cout<<U.user[i].score[j]<<"\t";
+			for(int j = 0;j<K;j++)
+				cout<<U.user[i].gpa[j]<<"\t";
+			cout<<U.user[i].agpa<<endl;
+			break;
+		}
+	}
+	if(i==U.nElem)
+	{
+		cout<<"该学生不存在"<<endl;
+	}
+	char ch;
+	cout<<"if继续查找,输入Y,\n"
+		<<"回到主菜单,输入N.\n"
+		<<"Please 输入:";
+	cin>>ch;
+	if(ch =='Y')
+		search();
+	else if(ch == 'N')
+		return ;
+}
+void sorts()
+{
+	meau_sort();
+	choose_sort();
+}
+
+void show()
+{
+	UserDatabase U;
+	U.disp();
+	char ch;
+	do 
+	{
+		cout<<"回到主菜单，请输入R"<<endl;
+		cin>>ch;
+	}
+	while(ch !='R');
+
+}
+void deletes()
+{
+	UserDatabase U;
+	char s[N];
+	cout<<"请输入你要删除的学生的学号:";
+	cin>>s;
+	for(int i = 0;i<U.nElem;i++)
+	{
+		if(!mycmp(U.user[i].num,10,s,10))
+		{
+			for(;i<U.nElem;i++)
+			{
+				U.user[i]=U.user[i+1];
+				U.nElem--;
+			}
+			return ;
+		}
+	}
+	cout<<"学号输错了。。。。。"<<endl;
+}
+void meau_sort()
+{
+	cout<<" 请输入排序方式"<<endl;
+	cout<<"1 - 按学号(升序)"<<endl;
+	cout<<"2 - 按姓名(升序)"<<endl;
+	cout<<"3 - 按平均绩点(升序)"<<endl;
+	cout<<"4 - 按学号(降序)"<<endl;
+	cout<<"5 - 按姓名(降序)"<<endl;	
+	cout<<"6 - 按平均绩点(降序)"<<endl;
+	cout<<"输入选择："<<endl;
+}
+void choose_sort()
+{
+	UserDatabase U;
+	int i;
+	cin>>i;
+	switch(i)
+	{
+	case 1:U.sorta_num();
+		break;
+	case 2:U.sorta_name();
+		break;
+	case 3:U.sorta_agpa();
+		break;
+	case 4:U.sort_num();
+		break;
+	case 5:U.sort_name();
+		break;
+	case 6:U.sort_agpa();
+		break;
+	default:cout<<"输入错误."<<endl;
+	}
+}
